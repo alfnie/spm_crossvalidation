@@ -23,7 +23,7 @@ catch
 end
 if ~ok||isempty(SPM)||isempty(xSPM), [SPM,xSPM]=spm_getSPM; end
 if nargin<3||isempty(filename), 
-    [filename,filepath]=uiputfile('*.nii','Save cross-validation mask file as'); 
+    [filename,filepath]=uiputfile('*.nii','Save cross-validation mask file as','cvmask.nii'); 
     filename=fullfile(filepath,filename);
 end
 
