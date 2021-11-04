@@ -83,7 +83,7 @@ Nm=Nm(4);
 if ~isempty(roiname)
     Vextract=struct('fname',fullfile(maskpath,[maskname,'.extracted',maskext]),'descrip','spm_nestedcrossvalidation_extract file','mat',ni.mat,'dim',ni.dat.dim(1:3),'n',[1,1],'pinfo',[1;0;0],'dt',[spm_type('uint8'),spm_platform('bigend')]);
     try, spm_unlink(Vextract.fname); end
-    Vextract=repmat(Vextract,[N,1]);for nb=1:N,Vextract(nb).n=[nb,1];end
+    Vextract=repmat(Vextract,[N^2,1]);for nb=1:N^2,Vextract(nb).n=[nb,1];end
     Vextract=spm_create_vol(Vextract);
 end
 
