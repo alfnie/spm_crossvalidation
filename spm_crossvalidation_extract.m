@@ -119,8 +119,26 @@ KWY   = spm_filter(SPM.xX.K,SPM.xX.W*data);
 beta  = SPM.xX.pKX*KWY;
 clear contrasts;
 for ncon=1:numel(SPM.xCon),
-    contrasts(ncon)=struct('design',SPM.xX.X,'name',SPM.xCon(ncon).name,'STAT',SPM.xCon(ncon).STAT,'contrast',SPM.xCon(ncon).c,'values',SPM.xCon(ncon).c'*beta);
-    if size(data,2)==1, disp(['Contrast ''',SPM.xCon(ncon).name,''' cross-validated value(s) : ',num2str(contrasts(ncon).values(:)')]); end
+    y=SPM.xX.X*SPM.xCon(ncon).c; % estimate contrast sum for each subject
+    x=[ones(N,1) data];          % linearly from the data
+    test_y=nan(N,size(y,2));
+    null_y=nan(N,size(y,2));
+    for n=1:N,
+        train_y=y([1:n-1,n+1:end],:);
+        train_x=x([1:n-1,n+1:end],:);
+        train_beta=train_x\train_y;
+        null_beta=train_x(:,1)\train_y;
+        test_y(n,:)=x(n,:)*train_beta;
+        null_y(n,:)=x(n,1)*null_beta;
+    end
+    test_rms=sqrt(mean(mean(abs(y-test_y).^2)));
+    null_rms=sqrt(mean(mean(abs(y-null_y).^2)));
+    r2=max(0,1-test_rms^2/null_rms^2);
+    contrasts(ncon)=struct('design',SPM.xX.X,'name',SPM.xCon(ncon).name,'STAT',SPM.xCon(ncon).STAT,'contrast',SPM.xCon(ncon).c,'values',SPM.xCon(ncon).c'*beta,'CV_Y',y,'CV_Yfit',test_y,'CV_RMS',test_rms,'CV_R2',r2);
+    if size(data,2)==1, 
+        disp(['Contrast ''',SPM.xCon(ncon).name,''' cross-validated value(s) : ',num2str(contrasts(ncon).values(:)')]); 
+        disp(['Contrast ''',SPM.xCon(ncon).name,''' cross-validated linear fit R-square : ',num2str(contrasts(ncon).fit_R2(:)')]);
+    end
 end
 
 if ~nargout
