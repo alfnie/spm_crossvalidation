@@ -1,10 +1,10 @@
 function [data,voxels,contrasts,labels]=spm_nestedcrossvalidation_extract(maskname,roiname,spmname)
-% SPM_CROSSVALIDATION_EXTRACT extracts BOLD data from subject-specific
-% cross-validation mask file. 
+% SPM_NESTEDCROSSVALIDATION_EXTRACT extracts BOLD data from subject-specific
+% nested cross-validation mask file. 
 %
-% After running SPM_CROSSVALIDATION use
-%    data=SPM_CROSSVALIDATION_EXTRACT;
-% to extract cross-validated data using the resulting subject-specific masks.
+% After running SPM_NESTEDCROSSVALIDATION use
+%    data=SPM_NESTEDCROSSVALIDATION_EXTRACT;
+% to extract nested cross-validated data using the resulting subject-specific masks.
 %
 % Steps:
 %    1) select a cross-validation mask file (*.nii file created using SPM_CROSSVALIDATION)
@@ -15,11 +15,37 @@ function [data,voxels,contrasts,labels]=spm_nestedcrossvalidation_extract(maskna
 %    3) select second-level SPM.mat file (typically the same second-level
 %    SPM.mat file used in the SMP_CROSSVALIDATION step)
 %
-% The matrix data (of size number-of-subjects by number-of-regions) will contain 
-% the cross-validated data of the selected second-level analysis (SPM.xY volumes) 
-% aggregated across each ROI. 
+% Description:
+%  Within each (outer-layer) crossvalidation iteration the matrix data (of size number-of-subjects minus one by number-of-regions) will contain 
+%  the cross-validated data of the selected second-level analysis (SPM.xY volumes) aggregated across each ROI. A linear model will be
+%  used to fit this crossvalidated data to the design contrast values (X*C) for these same N-1 subjects, and this fit will be evaluated in the 
+%  (outer-layer) left-out subject. The procedure will be repeated for each (outer-layer) iteration and the fit RMS and R2 values are reported
 %
-% see also SPM_CROSSVALIDATION
+% Equations:
+%   (1) Original SPM model:
+%     Y = X*B + noise           where Y = functional data at each voxel; X = design matrix; B = estimated regressor coefficient images
+%   (2) Hypothesis testing:
+%     C*B = 0                   where C = between-subjects contrast
+%   (3) Cross-validated data
+%     y = Y*mask                where mask is a vector of 0/1 values indicating suprathreshold voxels where the above hypothesis was rejected (optionally a voxels x ROIs matrix, when dividing into multiple ROI parcels)
+%   (4) Predictive model:
+%     X*C' = a + y*b + noise    where a,b = estimated regressor coefficient values
+%
+% Procedure:
+%   1) Using N-2 subjects (leaving subject i and j out), fit equations (1)&(2) above and compute mask_(i,j) (suprathreshold mask of voxels defined from an original SPM model that included all subjects except the i-th and j-th subjects)
+%        note: for each j, mask_(i~=j,j) represents the masks that would result from running a standard spm_crossvalidation step on a restricted dataset that does not include subject #j
+%                          mask_(j,j) represents the mask that would result from running the original SPM model on a restricted dataset that does not include subject #j
+%   2) for each j,
+%           2.1) for each i, compute equation (3) to estimate y_(i,j) = Y(i,:)*mask_(i,j)
+%           2.2) use equation (4) restricted to all i~=j subjects to estimate a_j and b_j using linear regression (i.e. fit a N-1 subjects model of the form "X(i,:)*C' = a_j + y_(i,j)*b_j + noise" including all subjects i~=j)
+%           2.3) compute error term E_j = a_j + y_(j,j)*b_j - X(j,:)*C on the left-out subject j
+%   3) aggregate across all error terms to compute
+%           rms = SUM_j=1:N{E_j^2} / N
+%       
+%   Step 1 above is performed by spm_nestedcrossvalidation.m
+%   Steps 2 and 3 above are performed by spm_nestedcrossvalidation_extract (as equation (3) cross-validated data extraction can vary depending on choice of ROIs, a priori coordinates, etc.)
+%
+% see also SPM_NESTEDCROSSVALIDATION
 %
 
 % alfnie@gmail.com 2021

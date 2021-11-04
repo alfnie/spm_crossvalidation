@@ -8,6 +8,27 @@ function spm_crossvalidation(SPM,xSPM,filename)
 % time. For each of these cases supra-threshold voxels will be saved in a
 % subject-specific mask file. 
 %
+% Description:
+%  Within each crossvalidation iteration the matrix data (of size number-of-subjects minus one by number-of-regions) will contain 
+%  the cross-validated data of the selected second-level analysis (SPM.xY volumes) aggregated across each ROI. 
+%
+% Equations:
+%   (1) Original SPM model:
+%     Y = X*B + noise           where Y = functional data at each voxel; X = design matrix; B = estimated regressor coefficient images
+%   (2) Hypothesis testing:
+%     C*B = 0                   where C = between-subjects contrast
+%   (3) Cross-validated data
+%     y = Y*mask                where mask is a vector of 0/1 values indicating suprathreshold voxels where the above hypothesis was rejected (optionally a voxels x ROIs matrix, when dividing into multiple ROI parcels)
+%   (4) Predictive model: (not implemented here, see spm_nestedcrossvalidation)
+%     X*C' = a + y*b + noise    where a,b = estimated regressor coefficient values
+%
+% Procedure:
+%   1) Using N-1 subjects (leaving subject i out), fit equations (1)&(2) above and compute mask_(i) (suprathreshold mask of voxels defined from an original SPM model that included all subjects except the i-th subject)
+%   2) for each i, compute equation (3) to estimate y_(i) = Y(i,:)*mask_(i)
+%       
+%   Step 1 above is performed by spm_crossvalidation.m
+%   Step 2 is performed by spm_crossvalidation_extract (as equation (3) cross-validated data extraction can vary depending on choice of ROIs, a priori coordinates, etc.)
+%
 % see also SPM_CROSSVALIDATION_EXTRACT
 %
 
